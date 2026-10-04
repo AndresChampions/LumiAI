@@ -1,18 +1,143 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import {
+  Stack,
+  useRouter,
+  useSegments,
+} from "expo-router";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+} from "react-native";
 
-SplashScreen.preventAutoHideAsync();
+import {
+  useEffect,
+} from "react";
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+import {
+  AuthProvider,
+  useAuth,
+} from "../context/AuthContext";
+
+import {
+  TaskProvider,
+} from "../context/TaskContext";
+
+import {
+  SettingsProvider,
+} from "../context/SettingsContext";
+
+import {
+  COLORS,
+} from "../constants/theme";
+
+function AppNavigator() {
+  const {
+    session,
+    loading,
+  } =
+    useAuth();
+
+  const router =
+    useRouter();
+
+  const segments =
+    useSegments();
+
+  useEffect(() => {
+    if (
+      loading
+    ) {
+      return;
+    }
+
+    const firstSegment =
+      segments[0];
+
+    const isAuthScreen =
+      firstSegment ===
+        "login" ||
+      firstSegment ===
+        "register";
+
+    if (
+      !session &&
+      !isAuthScreen
+    ) {
+      router.replace(
+        "/login"
+      );
+
+      return;
+    }
+
+    if (
+      session &&
+      isAuthScreen
+    ) {
+      router.replace(
+        "/(tabs)/home"
+      );
+    }
+  }, [
+    session,
+    loading,
+    segments,
+  ]);
+
+  if (
+    loading
+  ) {
+    return (
+      <View
+        style={
+          styles.loading
+        }
+      >
+        <ActivityIndicator
+          size="large"
+          color={
+            COLORS.primary
+          }
+        />
+      </View>
+    );
+  }
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack
+      screenOptions={{
+        headerShown:
+          false,
+      }}
+    />
   );
 }
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <SettingsProvider>
+        <TaskProvider>
+          <AppNavigator />
+        </TaskProvider>
+      </SettingsProvider>
+    </AuthProvider>
+  );
+}
+
+const styles =
+  StyleSheet.create({
+    loading: {
+      flex: 1,
+
+      backgroundColor:
+        COLORS.background,
+
+      justifyContent:
+        "center",
+
+      alignItems:
+        "center",
+    },
+  });
