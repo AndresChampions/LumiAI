@@ -1,0 +1,54 @@
+-- =========================================================
+-- LUMI - POLÍTICAS PARA FOTOS DE PERFIL
+-- Bucket: avatars
+-- Ruta usada por la app:
+-- avatars/{user_id}/profile.jpg
+-- =========================================================
+
+
+-- 1. PERMITIR QUE EL USUARIO VEA SUS ARCHIVOS
+CREATE POLICY "LUMI avatars select own"
+ON storage.objects
+FOR SELECT
+TO authenticated
+USING (
+  bucket_id = 'avatars'
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+
+-- 2. PERMITIR QUE EL USUARIO SUBA SU FOTO
+CREATE POLICY "LUMI avatars insert own"
+ON storage.objects
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'avatars'
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+
+-- 3. PERMITIR REEMPLAZAR LA FOTO EXISTENTE
+CREATE POLICY "LUMI avatars update own"
+ON storage.objects
+FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'avatars'
+  AND (storage.foldername(name))[1] = auth.uid()::text
+)
+WITH CHECK (
+  bucket_id = 'avatars'
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);
+
+
+-- 4. PERMITIR ELIMINAR SU PROPIA FOTO
+CREATE POLICY "LUMI avatars delete own"
+ON storage.objects
+FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'avatars'
+  AND (storage.foldername(name))[1] = auth.uid()::text
+);

@@ -1,0 +1,114 @@
+-- =========================================================
+-- LUMI AI - MÓDULO DE NOTAS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS public.notes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID NOT NULL
+        REFERENCES auth.users(id)
+        ON DELETE CASCADE,
+
+    title TEXT NOT NULL DEFAULT 'Sin título',
+
+    content TEXT NOT NULL DEFAULT '',
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+
+-- =========================================================
+-- ÍNDICE
+-- =========================================================
+
+CREATE INDEX IF NOT EXISTS notes_user_id_idx
+ON public.notes(user_id);
+
+
+-- =========================================================
+-- ROW LEVEL SECURITY
+-- =========================================================
+
+ALTER TABLE public.notes
+ENABLE ROW LEVEL SECURITY;
+
+
+-- Eliminamos las políticas si ya existieran,
+-- para poder ejecutar este script sin problemas.
+
+DROP POLICY IF EXISTS
+"LUMI notes select own"
+ON public.notes;
+
+DROP POLICY IF EXISTS
+"LUMI notes insert own"
+ON public.notes;
+
+DROP POLICY IF EXISTS
+"LUMI notes update own"
+ON public.notes;
+
+DROP POLICY IF EXISTS
+"LUMI notes delete own"
+ON public.notes;
+
+
+-- =========================================================
+-- VER MIS NOTAS
+-- =========================================================
+
+CREATE POLICY
+"LUMI notes select own"
+ON public.notes
+FOR SELECT
+TO authenticated
+USING (
+    auth.uid() = user_id
+);
+
+
+-- =========================================================
+-- CREAR MIS NOTAS
+-- =========================================================
+
+CREATE POLICY
+"LUMI notes insert own"
+ON public.notes
+FOR INSERT
+TO authenticated
+WITH CHECK (
+    auth.uid() = user_id
+);
+
+
+-- =========================================================
+-- EDITAR MIS NOTAS
+-- =========================================================
+
+CREATE POLICY
+"LUMI notes update own"
+ON public.notes
+FOR UPDATE
+TO authenticated
+USING (
+    auth.uid() = user_id
+)
+WITH CHECK (
+    auth.uid() = user_id
+);
+
+
+-- =========================================================
+-- ELIMINAR MIS NOTAS
+-- =========================================================
+
+CREATE POLICY
+"LUMI notes delete own"
+ON public.notes
+FOR DELETE
+TO authenticated
+USING (
+    auth.uid() = user_id
+);
