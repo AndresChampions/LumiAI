@@ -19,19 +19,19 @@ import {
   useMemo,
   useState,
 } from "react";
-import Svg, {
-  Path as SvgPath,
-} from "react-native-svg";
 import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import Svg, {
+  Path as SvgPath,
+} from "react-native-svg";
 
-import { useAuth } from "../context/AuthContext";
-import { supabase } from "../lib/supabase";
 import {
   COLORS,
   RADIUS,
 } from "../constants/theme";
+import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 
 type Note = {
   id: string;
@@ -686,108 +686,126 @@ export default function NotesScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.notesHero}>
+        <View style={styles.notesHeroText}>
+          <Text style={styles.notesHeroLabel}>LUMI NOTES</Text>
+          <Text style={styles.notesHeroTitle}>
+            Guarda tus ideas
+          </Text>
+          <Text style={styles.notesHeroSubtitle}>
+            Notas y pizarras en un solo lugar.
+          </Text>
+        </View>
+
+        <Image
+          source={require("../../assets/images/lumi-9.png")}
+          style={styles.notesHeroImage}
+          resizeMode="contain"
+        />
+      </View>
+
       <View
         style={
           styles.modeTabs
         }
       >
-        <TouchableOpacity
-          style={[
-            styles.modeTab,
-            section ===
-              "notes" &&
-              styles.modeTabActive,
-          ]}
-          onPress={() =>
-            setSection(
-              "notes"
-            )
-          }
-        >
-          <Ionicons
-            name="document-text-outline"
-            size={22}
-            color={
+          <TouchableOpacity
+            style={[
+              styles.modeTab,
               section ===
-              "notes"
-                ? "#FFFFFF"
-                : COLORS.primarySoft
+                "notes" &&
+                styles.modeTabActive,
+            ]}
+            onPress={() =>
+              setSection(
+                "notes"
+              )
             }
-          />
-
-          <View>
-            <Text
-              style={[
-                styles.modeTitle,
+          >
+            <Ionicons
+              name="document-text-outline"
+              size={22}
+              color={
                 section ===
-                  "notes" &&
-                  styles.modeTitleActive,
-              ]}
-            >
-              Notas
-            </Text>
+                "notes"
+                  ? "#FFFFFF"
+                  : COLORS.primarySoft
+              }
+            />
 
-            <Text
-              style={[
-                styles.modeSubtitle,
-                section ===
-                  "notes" &&
-                  styles.modeSubtitleActive,
-              ]}
-            >
-              Escribe ideas
-            </Text>
-          </View>
-        </TouchableOpacity>
+            <View>
+              <Text
+                style={[
+                  styles.modeTitle,
+                  section ===
+                    "notes" &&
+                    styles.modeTitleActive,
+                ]}
+              >
+                Notas
+              </Text>
 
-        <TouchableOpacity
-          style={[
-            styles.modeTab,
-            section ===
-              "boards" &&
-              styles.modeTabActive,
-          ]}
-          onPress={() =>
-            setSection(
-              "boards"
-            )
-          }
-        >
-          <Ionicons
-            name="brush-outline"
-            size={22}
-            color={
+              <Text
+                style={[
+                  styles.modeSubtitle,
+                  section ===
+                    "notes" &&
+                    styles.modeSubtitleActive,
+                ]}
+              >
+                Escribe ideas
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeTab,
               section ===
-              "boards"
-                ? "#FFFFFF"
-                : COLORS.primarySoft
+                "boards" &&
+                styles.modeTabActive,
+            ]}
+            onPress={() =>
+              setSection(
+                "boards"
+              )
             }
-          />
-
-          <View>
-            <Text
-              style={[
-                styles.modeTitle,
+          >
+            <Ionicons
+              name="brush-outline"
+              size={22}
+              color={
                 section ===
-                  "boards" &&
-                  styles.modeTitleActive,
-              ]}
-            >
-              Pizarras
-            </Text>
+                "boards"
+                  ? "#FFFFFF"
+                  : COLORS.primarySoft
+              }
+            />
 
-            <Text
-              style={[
-                styles.modeSubtitle,
-                section ===
-                  "boards" &&
-                  styles.modeSubtitleActive,
-              ]}
-            >
-              Dibuja libre
-            </Text>
-          </View>
-        </TouchableOpacity>
+            <View>
+              <Text
+                style={[
+                  styles.modeTitle,
+                  section ===
+                    "boards" &&
+                    styles.modeTitleActive,
+                ]}
+              >
+                Pizarras
+              </Text>
+
+              <Text
+                style={[
+                  styles.modeSubtitle,
+                  section ===
+                    "boards" &&
+                    styles.modeSubtitleActive,
+                ]}
+              >
+                Dibuja libre
+              </Text>
+            </View>
+          </TouchableOpacity>
       </View>
 
       {section ===
@@ -1124,7 +1142,7 @@ export default function NotesScreen() {
                                   .url,
                             }}
                             style={
-                              StyleSheet.absoluteFillObject
+                              StyleSheet.absoluteFill
                             }
                             resizeMode="cover"
                           />
@@ -1219,10 +1237,11 @@ const styles =
       maxWidth: 520,
       alignSelf: "center",
       paddingHorizontal: 18,
-      paddingTop: 12,
-      paddingBottom: 14,
+      paddingTop: 10,
+      paddingBottom: 12,
       flexDirection: "row",
       alignItems: "center",
+      minHeight: 82,
     },
 
     circleButton: {
@@ -1255,6 +1274,71 @@ const styles =
       marginTop: 2,
     },
 
+    notesHero: {
+      width: "auto",
+      maxWidth: 484,
+      alignSelf: "center",
+      marginHorizontal: 18,
+      minHeight: 126,
+      borderRadius:
+        RADIUS.lg,
+      backgroundColor:
+        COLORS.surface2,
+      borderWidth: 1,
+      borderColor:
+        COLORS.border,
+      flexDirection: "row",
+      alignItems: "center",
+      overflow: "hidden",
+      paddingLeft: 16,
+      paddingRight: 8,
+      marginBottom: 14,
+    },
+
+    notesHeroText: {
+      flex: 1,
+      paddingVertical: 14,
+      zIndex: 2,
+    },
+
+    notesHeroLabel: {
+      color:
+        COLORS.primarySoft,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1,
+    },
+
+    notesHeroTitle: {
+      color:
+        COLORS.text,
+      fontSize: 18,
+      fontWeight: "700",
+      marginTop: 5,
+    },
+
+    notesHeroSubtitle: {
+      color:
+        COLORS.textMuted,
+      fontSize: 11,
+      lineHeight: 15,
+      marginTop: 6,
+      maxWidth: 190,
+    },
+
+    notesHeroMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 13,
+    },
+
+    notesHeroImage: {
+      width: 104,
+      height: 104,
+      marginRight: -2,
+    },
+
     addButton: {
       width: 44,
       height: 44,
@@ -1267,18 +1351,18 @@ const styles =
     },
 
     modeTabs: {
-      width: "auto",
-      maxWidth: 484,
+      width: "100%",
+      maxWidth: 270,
       alignSelf: "center",
-      marginHorizontal: 18,
       flexDirection: "row",
-      gap: 10,
-      marginBottom: 14,
+      justifyContent: "center",
+      gap: 8,
+      marginBottom: 12,
     },
 
     modeTab: {
       flex: 1,
-      minHeight: 68,
+      minHeight: 54,
       borderRadius:
         RADIUS.md,
       backgroundColor:
@@ -1286,7 +1370,7 @@ const styles =
       borderWidth: 1,
       borderColor:
         COLORS.border,
-      paddingHorizontal: 14,
+      paddingHorizontal: 11,
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
@@ -1302,7 +1386,7 @@ const styles =
     modeTitle: {
       color:
         COLORS.text,
-      fontSize: 14,
+      fontSize: 12,
       fontWeight: "700",
     },
 
@@ -1313,8 +1397,8 @@ const styles =
     modeSubtitle: {
       color:
         COLORS.textMuted,
-      fontSize: 9,
-      marginTop: 2,
+      fontSize: 8,
+      marginTop: 1,
     },
 
     modeSubtitleActive: {
@@ -1323,11 +1407,10 @@ const styles =
     },
 
     searchBox: {
-      width: "auto",
-      maxWidth: 484,
+      width: "100%",
+      maxWidth: 270,
       alignSelf: "center",
-      marginHorizontal: 18,
-      height: 46,
+      height: 44,
       borderRadius:
         RADIUS.md,
       backgroundColor:
@@ -1338,6 +1421,7 @@ const styles =
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 13,
+      marginBottom: 4,
     },
 
     searchInput: {

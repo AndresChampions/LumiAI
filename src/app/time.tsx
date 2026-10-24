@@ -1,4 +1,5 @@
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,7 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { COLORS, RADIUS } from "../constants/theme";
+import { COLORS } from "../constants/theme";
 
 type Mode = "stopwatch" | "timer" | "focus";
 
@@ -33,24 +34,40 @@ function formatSeconds(totalSeconds: number) {
   return `${mm}:${ss}`;
 }
 
+function formatClockDate(date = new Date()) {
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function TimeScreen() {
   const [mode, setMode] = useState<Mode>("stopwatch");
+  const [now, setNow] = useState(() => formatClockDate());
 
   const [stopwatchSeconds, setStopwatchSeconds] = useState(0);
   const [stopwatchRunning, setStopwatchRunning] = useState(false);
   const [laps, setLaps] = useState<number[]>([]);
 
   const [timerMinutes, setTimerMinutes] = useState(15);
-  const [timerSeconds, setTimerSeconds] = useState(timerMinutes * 60);
+  const [timerSeconds, setTimerSeconds] = useState(15 * 60);
   const [timerRunning, setTimerRunning] = useState(false);
 
   const [focusMinutes, setFocusMinutes] = useState(25);
-  const [focusSeconds, setFocusSeconds] = useState(focusMinutes * 60);
+  const [focusSeconds, setFocusSeconds] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
   const [focusSessions, setFocusSessions] = useState(0);
 
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const focusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(formatClockDate());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!stopwatchRunning) return;
@@ -130,6 +147,27 @@ export default function TimeScreen() {
       ? timerRunning
       : focusRunning;
 
+  const heroTitle =
+    mode === "stopwatch"
+      ? "Mide tu ritmo"
+      : mode === "timer"
+      ? "Cuenta regresiva"
+      : "Entra en enfoque";
+
+  const heroText =
+    mode === "stopwatch"
+      ? "Controla tu tiempo con un cronómetro limpio y rápido."
+      : mode === "timer"
+      ? `Temporizador listo para ${timerMinutes} min.`
+      : `Sesión de enfoque activa para ${focusMinutes} min.`;
+
+  const chipText =
+    mode === "stopwatch"
+      ? `${laps.length} vueltas`
+      : mode === "timer"
+      ? `${timerMinutes} min`
+      : `${focusSessions} sesiones`;
+
   const toggleRunning = () => {
     if (mode === "stopwatch") {
       setStopwatchRunning((value) => !value);
@@ -176,76 +214,105 @@ export default function TimeScreen() {
     setFocusSeconds(minutes * 60);
   };
 
-  const activeSubtitle =
-    mode === "stopwatch"
-      ? "Mide exactamente cuánto te toma una actividad."
-      : mode === "timer"
-      ? `Temporizador de ${timerMinutes} minutos.`
-      : `Sesión de enfoque de ${focusMinutes} minutos.`;
-
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={22} color={COLORS.text} />
+            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
           </TouchableOpacity>
 
           <View style={styles.headerText}>
             <Text style={styles.title}>Tiempo</Text>
-            <Text style={styles.subtitle}>Cronometra, enfócate y toma descansos.</Text>
+            <Text style={styles.subtitle}>Cronómetro, temporizador y enfoque</Text>
           </View>
+        </View>
+
+        <View style={styles.heroCard}>
+          <View style={styles.heroInfo}>
+            <Text style={styles.heroEyebrow}>TU TIEMPO</Text>
+            <Text style={styles.heroTitle}>{heroTitle}</Text>
+            <Text style={styles.heroDescription}>{heroText}</Text>
+
+            <View style={styles.heroMetaRow}>
+              <View style={styles.heroChip}>
+                <Text style={styles.heroChipText}>{chipText}</Text>
+              </View>
+              <Text style={styles.liveClock}>{now}</Text>
+            </View>
+          </View>
+
+          <Image source={require("../../assets/images/lumi-8.png")} style={styles.heroImage} resizeMode="contain" />
         </View>
 
         <View style={styles.modeRow}>
-          <ModeButton active={mode === "stopwatch"} icon="stopwatch-outline" label="Cronómetro" onPress={() => setMode("stopwatch")} />
-          <ModeButton active={mode === "timer"} icon="timer-outline" label="Temporizador" onPress={() => setMode("timer")} />
-          <ModeButton active={mode === "focus"} icon="leaf-outline" label="Enfoque" onPress={() => setMode("focus")} />
+          <ModeButton
+            active={mode === "stopwatch"}
+            icon="stopwatch-outline"
+            title="Cronómetro"
+            subtitle="Mide tiempo"
+            onPress={() => setMode("stopwatch")}
+          />
+          <ModeButton
+            active={mode === "timer"}
+            icon="timer-outline"
+            title="Timer"
+            subtitle="Cuenta atrás"
+            onPress={() => setMode("timer")}
+          />
+          <ModeButton
+            active={mode === "focus"}
+            icon="sparkles-outline"
+            title="Enfoque"
+            subtitle="Pomodoro"
+            onPress={() => setMode("focus")}
+          />
         </View>
 
         <View style={styles.clockCard}>
-          <View style={styles.clockIcon}>
-            <Ionicons
-              name={mode === "stopwatch" ? "stopwatch-outline" : mode === "timer" ? "timer-outline" : "leaf-outline"}
-              size={27}
-              color={COLORS.primarySoft}
-            />
-          </View>
-
+          <Text style={styles.clockLabel}>
+            {mode === "stopwatch" ? "CRONÓMETRO" : mode === "timer" ? "TEMPORIZADOR" : "ENFOQUE"}
+          </Text>
           <Text style={styles.clockValue}>{selectedTime}</Text>
-          <Text style={styles.clockSubtitle}>{activeSubtitle}</Text>
+          <Text style={styles.clockHint}>
+            {mode === "stopwatch"
+              ? "Ideal para medir estudio, ejercicio o cualquier actividad."
+              : mode === "timer"
+              ? "Elige un tiempo rápido y deja correr la cuenta atrás."
+              : "Mantén una sesión limpia de enfoque con un solo toque."}
+          </Text>
 
           <View style={styles.controlsRow}>
-            <TouchableOpacity style={styles.secondaryControl} onPress={resetCurrent}>
-              <Ionicons name="refresh-outline" size={19} color={COLORS.text} />
+            <TouchableOpacity style={styles.sideAction} onPress={resetCurrent}>
+              <Ionicons name="refresh-outline" size={18} color={COLORS.text} />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.primaryControl} onPress={toggleRunning}>
+            <TouchableOpacity style={styles.mainAction} onPress={toggleRunning}>
               <Ionicons name={isRunning ? "pause" : "play"} size={24} color="#FFFFFF" />
             </TouchableOpacity>
 
             {mode === "stopwatch" ? (
               <TouchableOpacity
-                style={styles.secondaryControl}
+                style={styles.sideAction}
                 disabled={stopwatchSeconds === 0}
                 onPress={() => setLaps((current) => [stopwatchSeconds, ...current])}
               >
                 <Ionicons
                   name="flag-outline"
-                  size={19}
+                  size={18}
                   color={stopwatchSeconds === 0 ? COLORS.textMuted : COLORS.text}
                 />
               </TouchableOpacity>
             ) : (
-              <View style={styles.controlSpacer} />
+              <View style={styles.sideActionPlaceholder} />
             )}
           </View>
         </View>
 
         {mode === "timer" && (
           <>
-            <Text style={styles.sectionLabel}>TIEMPOS RÁPIDOS</Text>
-            <View style={styles.presetGrid}>
+            <Text style={styles.sectionTitle}>TIEMPOS RÁPIDOS</Text>
+            <View style={styles.presetRow}>
               {TIMER_PRESETS.map((minutes) => (
                 <PresetButton
                   key={minutes}
@@ -260,16 +327,18 @@ export default function TimeScreen() {
 
         {mode === "focus" && (
           <>
-            <View style={styles.focusStats}>
-              <View>
-                <Text style={styles.focusStatsLabel}>SESIONES TERMINADAS</Text>
-                <Text style={styles.focusStatsValue}>{focusSessions}</Text>
+            <View style={styles.sessionCard}>
+              <View style={styles.sessionIconWrap}>
+                <Ionicons name="sparkles-outline" size={18} color={COLORS.primarySoft} />
               </View>
-              <Ionicons name="sparkles-outline" size={25} color={COLORS.primarySoft} />
+              <View style={styles.sessionInfo}>
+                <Text style={styles.sessionTitle}>Sesiones completadas</Text>
+                <Text style={styles.sessionText}>{focusSessions} completadas</Text>
+              </View>
             </View>
 
-            <Text style={styles.sectionLabel}>DURACIÓN DE ENFOQUE</Text>
-            <View style={styles.presetGrid}>
+            <Text style={styles.sectionTitle}>DURACIÓN DE ENFOQUE</Text>
+            <View style={styles.presetRow}>
               {FOCUS_PRESETS.map((minutes) => (
                 <PresetButton
                   key={minutes}
@@ -279,27 +348,21 @@ export default function TimeScreen() {
                 />
               ))}
             </View>
-
-            <View style={styles.tipCard}>
-              <View style={styles.tipIcon}>
-                <Ionicons name="heart-outline" size={20} color={COLORS.primarySoft} />
-              </View>
-              <View style={styles.tipInfo}>
-                <Text style={styles.tipTitle}>Consejo de LUMI</Text>
-                <Text style={styles.tipText}>
-                  Una sesión de 25 minutos con una pausa corta ayuda a mantener el enfoque sin saturarte.
-                </Text>
-              </View>
-            </View>
           </>
         )}
 
         {mode === "stopwatch" && laps.length > 0 && (
           <>
-            <Text style={styles.sectionLabel}>VUELTAS</Text>
-            <View style={styles.lapsCard}>
+            <Text style={styles.sectionTitle}>MIS VUELTAS</Text>
+            <View style={styles.listCard}>
               {laps.slice(0, 8).map((lap, index) => (
-                <View key={`${lap}-${index}`} style={styles.lapRow}>
+                <View
+                  key={`${lap}-${index}`}
+                  style={[
+                    styles.lapRow,
+                    index === Math.min(laps.length, 8) - 1 && styles.lapRowLast,
+                  ]}
+                >
                   <Text style={styles.lapLabel}>Vuelta {laps.length - index}</Text>
                   <Text style={styles.lapTime}>{formatSeconds(lap)}</Text>
                 </View>
@@ -307,20 +370,6 @@ export default function TimeScreen() {
             </View>
           </>
         )}
-
-        <View style={styles.miniGrid}>
-          <View style={styles.miniCard}>
-            <Ionicons name="moon-outline" size={21} color={COLORS.primarySoft} />
-            <Text style={styles.miniTitle}>Descansos</Text>
-            <Text style={styles.miniText}>Haz una pausa breve entre sesiones largas.</Text>
-          </View>
-
-          <View style={styles.miniCard}>
-            <Ionicons name="checkmark-done-outline" size={21} color={COLORS.primarySoft} />
-            <Text style={styles.miniTitle}>Productividad</Text>
-            <Text style={styles.miniText}>Combina Tiempo con tus tareas de LUMI.</Text>
-          </View>
-        </View>
       </ScrollView>
     </View>
   );
@@ -329,15 +378,25 @@ export default function TimeScreen() {
 type ModeButtonProps = {
   active: boolean;
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  title: string;
+  subtitle: string;
   onPress: () => void;
 };
 
-function ModeButton({ active, icon, label, onPress }: ModeButtonProps) {
+function ModeButton({ active, icon, title, subtitle, onPress }: ModeButtonProps) {
   return (
-    <TouchableOpacity style={[styles.modeButton, active && styles.modeButtonActive]} onPress={onPress} activeOpacity={0.82}>
-      <Ionicons name={icon} size={18} color={active ? COLORS.primarySoft : COLORS.textMuted} />
-      <Text style={[styles.modeText, active && styles.modeTextActive]} numberOfLines={1}>{label}</Text>
+    <TouchableOpacity
+      style={[styles.modeButton, active && styles.modeButtonActive]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <Ionicons name={icon} size={19} color={active ? "#FFFFFF" : COLORS.primarySoft} />
+      <Text style={[styles.modeButtonTitle, active && styles.modeButtonTitleActive]} numberOfLines={1}>
+        {title}
+      </Text>
+      <Text style={[styles.modeButtonSubtitle, active && styles.modeButtonSubtitleActive]} numberOfLines={1}>
+        {subtitle}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -351,52 +410,288 @@ type PresetButtonProps = {
 function PresetButton({ active, label, onPress }: PresetButtonProps) {
   return (
     <TouchableOpacity style={[styles.presetButton, active && styles.presetButtonActive]} onPress={onPress}>
-      <Text style={[styles.presetText, active && styles.presetTextActive]}>{label}</Text>
+      <Text style={[styles.presetButtonText, active && styles.presetButtonTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { width: "100%", maxWidth: 480, alignSelf: "center", paddingHorizontal: 18, paddingTop: 22, paddingBottom: 80 },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 22 },
-  backButton: { width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center", marginRight: 12 },
-  headerText: { flex: 1 },
-  title: { color: COLORS.text, fontSize: 24, fontWeight: "700" },
-  subtitle: { color: COLORS.textMuted, fontSize: 11, marginTop: 3 },
-  modeRow: { flexDirection: "row", backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: 5, gap: 5, marginBottom: 18 },
-  modeButton: { flex: 1, minHeight: 58, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 4 },
-  modeButtonActive: { backgroundColor: COLORS.surface3 },
-  modeText: { color: COLORS.textMuted, fontSize: 9, fontWeight: "600" },
-  modeTextActive: { color: COLORS.text },
-  clockCard: { minHeight: 290, backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, paddingVertical: 28, marginBottom: 24 },
-  clockIcon: { width: 50, height: 50, borderRadius: 25, backgroundColor: COLORS.surface3, alignItems: "center", justifyContent: "center", marginBottom: 18 },
-  clockValue: { color: COLORS.text, fontSize: 52, lineHeight: 60, fontWeight: "300", letterSpacing: 1 },
-  clockSubtitle: { color: COLORS.textMuted, fontSize: 11, lineHeight: 16, textAlign: "center", marginTop: 8, maxWidth: 280 },
-  controlsRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 22, marginTop: 28 },
-  primaryControl: { width: 64, height: 64, borderRadius: 32, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
-  secondaryControl: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.surface3, alignItems: "center", justifyContent: "center" },
-  controlSpacer: { width: 46, height: 46 },
-  sectionLabel: { color: COLORS.primarySoft, fontSize: 10, fontWeight: "700", letterSpacing: 0.8, marginBottom: 10 },
-  presetGrid: { flexDirection: "row", flexWrap: "wrap", gap: 9, marginBottom: 24 },
-  presetButton: { minWidth: "22.8%", flexGrow: 1, height: 42, borderRadius: RADIUS.md, backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center", paddingHorizontal: 10 },
-  presetButtonActive: { backgroundColor: COLORS.surface3, borderColor: COLORS.primary },
-  presetText: { color: COLORS.textMuted, fontSize: 11, fontWeight: "600" },
-  presetTextActive: { color: COLORS.text },
-  focusStats: { minHeight: 82, backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, marginBottom: 22 },
-  focusStatsLabel: { color: COLORS.textMuted, fontSize: 9, fontWeight: "600", letterSpacing: 0.6 },
-  focusStatsValue: { color: COLORS.text, fontSize: 25, fontWeight: "700", marginTop: 4 },
-  tipCard: { backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, flexDirection: "row", padding: 14, marginBottom: 24 },
-  tipIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.surface3, alignItems: "center", justifyContent: "center", marginRight: 12 },
-  tipInfo: { flex: 1 },
-  tipTitle: { color: COLORS.text, fontSize: 12, fontWeight: "600" },
-  tipText: { color: COLORS.textMuted, fontSize: 10, lineHeight: 15, marginTop: 4 },
-  lapsCard: { backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14, marginBottom: 24 },
-  lapRow: { minHeight: 46, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border },
-  lapLabel: { color: COLORS.textMuted, fontSize: 11 },
-  lapTime: { color: COLORS.text, fontSize: 12, fontWeight: "600" },
-  miniGrid: { flexDirection: "row", gap: 10 },
-  miniCard: { width: "48.5%", minHeight: 126, backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: 14 },
-  miniTitle: { color: COLORS.text, fontSize: 12, fontWeight: "600", marginTop: 10 },
-  miniText: { color: COLORS.textMuted, fontSize: 9, lineHeight: 14, marginTop: 5 },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  content: {
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 80,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  headerText: {
+    flex: 1,
+  },
+  title: {
+    color: COLORS.text,
+    fontSize: 22,
+    fontWeight: "700",
+  },
+  subtitle: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  heroCard: {
+    backgroundColor: COLORS.surface2,
+    borderRadius: 24,
+    paddingVertical: 18,
+    paddingLeft: 18,
+    paddingRight: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  heroInfo: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  heroEyebrow: {
+    color: COLORS.primarySoft,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  heroTitle: {
+    color: COLORS.text,
+    fontSize: 17,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  heroDescription: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  heroMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 14,
+    gap: 10,
+  },
+  heroChip: {
+    backgroundColor: COLORS.surface3,
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroChipText: {
+    color: COLORS.primarySoft,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  liveClock: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  heroImage: {
+    width: 118,
+    height: 118,
+  },
+  modeRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 18,
+  },
+  modeButton: {
+    flex: 1,
+    backgroundColor: COLORS.surface2,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+  },
+  modeButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  modeButtonTitle: {
+    color: COLORS.text,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 8,
+  },
+  modeButtonTitleActive: {
+    color: "#FFFFFF",
+  },
+  modeButtonSubtitle: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  modeButtonSubtitleActive: {
+    color: "rgba(255,255,255,0.82)",
+  },
+  clockCard: {
+    backgroundColor: COLORS.surface2,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 22,
+    marginBottom: 18,
+    alignItems: "center",
+  },
+  clockLabel: {
+    color: COLORS.primarySoft,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  clockValue: {
+    color: COLORS.text,
+    fontSize: 52,
+    fontWeight: "300",
+    lineHeight: 58,
+  },
+  clockHint: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
+    marginTop: 10,
+    maxWidth: 290,
+  },
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 18,
+    marginTop: 22,
+  },
+  mainAction: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sideAction: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sideActionPlaceholder: {
+    width: 44,
+    height: 44,
+  },
+  sectionTitle: {
+    color: COLORS.primarySoft,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  presetRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 18,
+  },
+  presetButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: COLORS.surface2,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  presetButtonActive: {
+    backgroundColor: COLORS.surface3,
+  },
+  presetButtonText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  presetButtonTextActive: {
+    color: COLORS.text,
+  },
+  sessionCard: {
+    backgroundColor: COLORS.surface2,
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  sessionIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.surface3,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  sessionInfo: {
+    flex: 1,
+  },
+  sessionTitle: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  sessionText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  listCard: {
+    backgroundColor: COLORS.surface2,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  lapRow: {
+    minHeight: 54,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  lapRowLast: {
+    borderBottomWidth: 0,
+  },
+  lapLabel: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  lapTime: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+    fontWeight: "600",
+  },
 });

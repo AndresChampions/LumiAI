@@ -1,10 +1,13 @@
 import {
+  useEffect,
+  useRef,
   useState,
 } from "react";
 
 import {
   ActivityIndicator,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -76,6 +79,49 @@ export default function RegisterScreen() {
     successMessage,
     setSuccessMessage,
   ] = useState("");
+
+  const scrollRef =
+    useRef<ScrollView>(null);
+
+  const [
+    keyboardVisible,
+    setKeyboardVisible,
+  ] = useState(false);
+
+  useEffect(() => {
+    const show =
+      Keyboard.addListener(
+        "keyboardDidShow",
+        () =>
+          setKeyboardVisible(
+            true
+          )
+      );
+
+    const hide =
+      Keyboard.addListener(
+        "keyboardDidHide",
+        () =>
+          setKeyboardVisible(
+            false
+          )
+      );
+
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  const scrollToField =
+    (y: number) => {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          y,
+          animated: true,
+        });
+      }, 180);
+    };
 
   const handleRegister =
     async () => {
@@ -167,14 +213,22 @@ export default function RegisterScreen() {
         Platform.OS ===
         "ios"
           ? "padding"
-          : undefined
+          : "height"
       }
     >
       <ScrollView
-        contentContainerStyle={
-          styles.content
-        }
+        ref={scrollRef}
+        contentContainerStyle={[
+          styles.content,
+          keyboardVisible &&
+            styles.contentKeyboard,
+        ]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={
+          Platform.OS === "ios"
+            ? "interactive"
+            : "on-drag"
+        }
         showsVerticalScrollIndicator={
           false
         }
@@ -287,6 +341,9 @@ export default function RegisterScreen() {
               setUsername
             }
             placeholder="Tu nombre"
+            onFocus={() =>
+              scrollToField(70)
+            }
             placeholderTextColor={
               COLORS.textSoft
             }
@@ -330,6 +387,9 @@ export default function RegisterScreen() {
             }
             keyboardType="email-address"
             placeholder="correo@ejemplo.com"
+            onFocus={() =>
+              scrollToField(135)
+            }
             placeholderTextColor={
               COLORS.textSoft
             }
@@ -373,6 +433,9 @@ export default function RegisterScreen() {
               !showPassword
             }
             placeholder="Contraseña"
+            onFocus={() =>
+              scrollToField(205)
+            }
             placeholderTextColor={
               COLORS.textSoft
             }
@@ -436,6 +499,9 @@ export default function RegisterScreen() {
               !showPassword
             }
             placeholder="Repite tu contraseña"
+            onFocus={() =>
+              scrollToField(275)
+            }
             placeholderTextColor={
               COLORS.textSoft
             }
@@ -526,6 +592,11 @@ const styles =
       paddingTop: 28,
 
       paddingBottom: 45,
+    },
+
+    contentKeyboard: {
+      paddingTop: 18,
+      paddingBottom: 180,
     },
 
     robot: {

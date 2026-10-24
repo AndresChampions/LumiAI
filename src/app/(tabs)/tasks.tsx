@@ -146,6 +146,7 @@ function formatClock(
       {
         hour: "numeric",
         minute: "2-digit",
+        second: "2-digit",
         hour12: true,
       }
     )
@@ -357,7 +358,7 @@ export default function TasksScreen() {
             new Date()
           );
         },
-        30000
+        1000
       );
 
     return () =>

@@ -38,8 +38,7 @@ import {
 } from "../../context/TaskContext";
 
 import {
-  COLORS,
-  RADIUS,
+  COLORS
 } from "../../constants/theme";
 
 /* =========================================================
@@ -77,6 +76,49 @@ type CreateTaskAction = {
   };
 };
 
+type CreateNoteAction = {
+  type:
+    "create_note";
+
+  note: {
+    title: string;
+    content: string;
+  };
+};
+
+type UpdateNoteAction = {
+  type:
+    "update_note";
+
+  note: {
+    id: string;
+    title?: string;
+    content?: string;
+  };
+};
+
+type DeleteNoteAction = {
+  type:
+    "delete_note";
+
+  note: {
+    id: string;
+  };
+};
+
+type LumiAction =
+  | CreateTaskAction
+  | CreateNoteAction
+  | UpdateNoteAction
+  | DeleteNoteAction;
+
+type NoteContextItem = {
+  id: string;
+  title: string;
+  content: string;
+  updated_at: string;
+};
+
 type MemoryItem = {
   key: string;
 
@@ -87,7 +129,7 @@ type LumiResponse = {
   text: string;
 
   actions:
-    CreateTaskAction[];
+    LumiAction[];
 
   memories:
     MemoryItem[];
@@ -172,7 +214,7 @@ function cleanModelResponse(
     "No pude responder.";
 
   let actions:
-    CreateTaskAction[] =
+    LumiAction[] =
       [];
 
   let memories:
@@ -906,6 +948,48 @@ export default function AssistantScreen() {
       }
     };
 
+  const loadNotesContext =
+    async (): Promise<
+      NoteContextItem[]
+    > => {
+      if (!user?.id) {
+        return [];
+      }
+
+      const {
+        data,
+        error,
+      } = await supabase
+        .from("notes")
+        .select(
+          "id, title, content, updated_at"
+        )
+        .eq(
+          "user_id",
+          user.id
+        )
+        .order(
+          "updated_at",
+          {
+            ascending: false,
+          }
+        )
+        .limit(40);
+
+      if (error) {
+        console.log(
+          "LOAD NOTES CONTEXT:",
+          error.message
+        );
+
+        return [];
+      }
+
+      return (
+        data ?? []
+      ) as NoteContextItem[];
+    };
+
   /* =========================================================
      EJECUTAR TODAS LAS ACCIONES
   ========================================================= */
@@ -913,48 +997,171 @@ export default function AssistantScreen() {
   const executeActions =
     async (
       actions:
-        CreateTaskAction[]
+        LumiAction[]
     ) => {
-      /*
-       * IMPORTANTE:
-       *
-       * Recorremos TODAS.
-       *
-       * Si Gemini devuelve 3 tareas,
-       * se crean las 3.
-       */
-
       for (
         const action of
         actions
       ) {
         if (
-          action?.type !==
-            "create_task" ||
-          !action?.task
+          action?.type ===
+            "create_task" &&
+          action?.task
         ) {
+          await addTask({
+            title:
+              action.task.title,
+
+            date:
+              action.task.date,
+
+            time:
+              action.task.time,
+
+            notes:
+              action.task.notes ??
+              "",
+
+            notificationEnabled:
+              action.task
+                .notificationEnabled ??
+              true,
+          });
+
           continue;
         }
 
-        await addTask({
-          title:
-            action.task.title,
+        if (
+          action?.type ===
+            "create_note" &&
+          action?.note &&
+          user?.id
+        ) {
+          const title =
+            action.note.title
+              ?.trim() ||
+            "Nota de LUMI";
 
-          date:
-            action.task.date,
+          const content =
+            action.note.content
+              ?.trim() ||
+            "";
 
-          time:
-            action.task.time,
+          if (!content) {
+            continue;
+          }
 
-          notes:
-            action.task.notes ??
-            "",
+          const {
+            error,
+          } = await supabase
+            .from("notes")
+            .insert({
+              user_id:
+                user.id,
 
-          notificationEnabled:
-            action.task
-              .notificationEnabled ??
-            true,
-        });
+              title,
+
+              content,
+            });
+
+          if (error) {
+            console.log(
+              "CREATE NOTE:",
+              error.message
+            );
+          }
+
+          continue;
+        }
+
+        if (
+          action?.type ===
+            "update_note" &&
+          action?.note?.id &&
+          user?.id
+        ) {
+          const payload:
+            Record<
+              string,
+              string
+            > = {
+              updated_at:
+                new Date()
+                  .toISOString(),
+            };
+
+          if (
+            typeof action.note
+              .title ===
+            "string"
+          ) {
+            payload.title =
+              action.note.title
+                .trim() ||
+              "Sin título";
+          }
+
+          if (
+            typeof action.note
+              .content ===
+            "string"
+          ) {
+            payload.content =
+              action.note.content
+                .trim();
+          }
+
+          const {
+            error,
+          } = await supabase
+            .from("notes")
+            .update(payload)
+            .eq(
+              "id",
+              action.note.id
+            )
+            .eq(
+              "user_id",
+              user.id
+            );
+
+          if (error) {
+            console.log(
+              "UPDATE NOTE:",
+              error.message
+            );
+          }
+
+          continue;
+        }
+
+        if (
+          action?.type ===
+            "delete_note" &&
+          action?.note?.id &&
+          user?.id
+        ) {
+          const {
+            error,
+          } = await supabase
+            .from("notes")
+            .delete()
+            .eq(
+              "id",
+              action.note.id
+            )
+            .eq(
+              "user_id",
+              user.id
+            );
+
+          if (error) {
+            console.log(
+              "DELETE NOTE:",
+              error.message
+            );
+          }
+        }
       }
     };
 
@@ -1119,6 +1326,9 @@ export default function AssistantScreen() {
         const memories =
           await loadMemory();
 
+        const notesContext =
+          await loadNotesContext();
+
         /* =====================================================
            3. LLAMAR A LUMI
         ===================================================== */
@@ -1140,6 +1350,9 @@ export default function AssistantScreen() {
 
                 memory:
                   memories,
+
+                notes:
+                  notesContext,
 
                 userName:
                   profile?.username ??
@@ -1945,8 +2158,6 @@ const styles =
       marginBottom: 8,
     },
 
-    /* PENSANDO */
-
     thinking: {
       flexDirection:
         "row",
@@ -1988,8 +2199,6 @@ const styles =
 
       fontSize: 11,
     },
-
-    /* PREVIEW */
 
     previewWrapper: {
       alignSelf:
@@ -2037,8 +2246,6 @@ const styles =
       alignItems:
         "center",
     },
-
-    /* INPUT */
 
     inputContainer: {
       minHeight: 58,

@@ -1,3 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import { router } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -9,15 +13,10 @@ import {
   View,
 } from "react-native";
 
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import * as Location from "expo-location";
-
-import { useAuth } from "../../context/AuthContext";
-import { useTasks } from "../../context/TaskContext";
-import { useSettings } from "../../context/SettingsContext";
 import { COLORS, RADIUS } from "../../constants/theme";
+import { useAuth } from "../../context/AuthContext";
+import { useSettings } from "../../context/SettingsContext";
+import { useTasks } from "../../context/TaskContext";
 
 function formatToday() {
   const now = new Date();
@@ -127,6 +126,19 @@ export default function HomeScreen() {
 
   const displayName = profile?.username ?? user?.email?.split("@")[0] ?? "Usuario";
   const nextTask = pendingToday[0];
+
+  const daySummary = useMemo(() => {
+    if (pendingTodayCount === 0) return "No tienes pendientes para hoy.";
+    if (pendingTodayCount === 1) {
+      return nextTask?.time
+        ? `Tienes 1 pendiente. Lo próximo es ${nextTask.title} a las ${nextTask.time}.`
+        : `Tienes 1 pendiente para hoy.`;
+    }
+    if (nextTask?.time) {
+      return `Tienes ${pendingTodayCount} pendientes. Lo próximo es ${nextTask.title} a las ${nextTask.time}.`;
+    }
+    return `Tienes ${pendingTodayCount} pendientes para hoy.`;
+  }, [pendingTodayCount, nextTask]);
 
   useEffect(() => {
     let mounted = true;
@@ -242,7 +254,7 @@ export default function HomeScreen() {
             <Text style={styles.userName}>{displayName} 👋</Text>
           </View>
 
-          <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/(tabs)/profile")}>
+          <TouchableOpacity activeOpacity={0.82} onPress={() => router.push("/(tabs)/profile")}>
             {profile?.avatar_url ? (
               <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
             ) : (
@@ -255,22 +267,26 @@ export default function HomeScreen() {
 
         <View style={styles.lumiCard}>
           <View style={styles.lumiContent}>
-            <Text style={styles.lumiLabel}>TU DÍA CON LUMI</Text>
+            <Text style={styles.lumiLabel}>LUMI</Text>
             <Text style={styles.lumiTitle}>
               {pendingTodayCount === 0
-                ? "Hoy estás al día ✨"
+                ? "Todo bajo control"
                 : pendingTodayCount === 1
-                ? "Tienes 1 pendiente hoy"
-                : `Tienes ${pendingTodayCount} pendientes hoy`}
+                ? "Tienes 1 pendiente"
+                : `Tienes ${pendingTodayCount} pendientes`}
             </Text>
             <Text style={styles.lumiSubtitle} numberOfLines={2}>
               {nextTask
-                ? `Lo próximo: ${nextTask.title}${nextTask.time ? ` · ${nextTask.time}` : ""}`
-                : "Puedes planear algo nuevo o preguntarme lo que necesites."}
+                ? `Lo siguiente es ${nextTask.title}${nextTask.time ? ` · ${nextTask.time}` : ""}`
+                : "Puedes preguntarme algo o planear tu día."}
             </Text>
-            <TouchableOpacity style={styles.lumiButton} activeOpacity={0.86} onPress={() => router.push("/(tabs)/assistant")}>
+            <TouchableOpacity
+              style={styles.lumiButton}
+              activeOpacity={0.86}
+              onPress={() => router.push("/(tabs)/assistant")}
+            >
               <Text style={styles.lumiButtonText}>Hablar con LUMI</Text>
-              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
 
@@ -281,15 +297,29 @@ export default function HomeScreen() {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>ACCESOS RÁPIDOS</Text>
         <View style={styles.quickGrid}>
-          <QuickAction icon="document-text-outline" title="Notas y Pizarra" subtitle="Ideas y apuntes" onPress={() => router.push("/notes")} />
-          <QuickAction icon="timer-outline" title="Tiempo" subtitle="Enfoque y reloj" onPress={() => router.push("/time")} />
+          <QuickAction
+            icon="document-text-outline"
+            title="Notas y Pizarra"
+            subtitle="Ideas y apuntes"
+            onPress={() => router.push("/notes")}
+          />
+          <QuickAction
+            icon="timer-outline"
+            title="Tiempo"
+            subtitle="Enfoque y reloj"
+            onPress={() => router.push("/time")}
+          />
+        </View>
+
+        <View style={styles.briefCard}>
+          <Text style={styles.briefLabel}>HOY</Text>
+          <Text style={styles.briefText}>{daySummary}</Text>
         </View>
 
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitleNoMargin}>HOY</Text>
+            <Text style={styles.sectionTitle}>TAREAS DE HOY</Text>
             <Text style={styles.sectionSubtitle}>
               {pendingTodayCount === 0
                 ? "Sin pendientes"
@@ -298,7 +328,7 @@ export default function HomeScreen() {
                 : `${pendingTodayCount} tareas pendientes`}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/tasks")}>
+          <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/(tabs)/tasks")}>
             <Text style={styles.viewAllText}>Ver todas</Text>
           </TouchableOpacity>
         </View>
@@ -315,19 +345,28 @@ export default function HomeScreen() {
                 key={task.id}
                 style={styles.taskCard}
                 activeOpacity={0.82}
-                onPress={() => router.push({ pathname: "/reminder", params: { taskId: task.id } })}
+                onPress={() =>
+                  router.push({ pathname: "/reminder", params: { taskId: task.id } })
+                }
               >
                 <View style={styles.taskDot} />
                 <View style={styles.taskInfo}>
-                  <Text style={styles.taskTitle} numberOfLines={1}>{task.title}</Text>
-                  <Text style={styles.taskTime}>{task.time || "Sin hora"}</Text>
+                  <Text style={styles.taskTitle} numberOfLines={1}>
+                    {task.title}
+                  </Text>
+                  <Text style={styles.taskTime}>
+                    {task.time || "Sin hora"}
+                  </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={17} color={COLORS.textMuted} />
               </TouchableOpacity>
             ))}
 
             {pendingTodayCount > 3 && (
-              <TouchableOpacity style={styles.moreTasksButton} onPress={() => router.push("/(tabs)/tasks")}>
+              <TouchableOpacity
+                style={styles.moreTasksButton}
+                onPress={() => router.push("/(tabs)/tasks")}
+              >
                 <Text style={styles.moreTasksText}>Ver {pendingTodayCount - 3} más</Text>
               </TouchableOpacity>
             )}
@@ -353,22 +392,20 @@ export default function HomeScreen() {
           <Text style={styles.newTaskText}>Nueva tarea</Text>
         </TouchableOpacity>
 
-        <Text style={styles.sectionTitle}>RESUMEN</Text>
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryIcon}>
-              <Ionicons name="stats-chart-outline" size={20} color={COLORS.primarySoft} />
+        <View style={styles.infoRow}>
+          <View style={styles.infoCard}>
+            <View style={styles.infoTop}>
+              <Ionicons name="stats-chart-outline" size={18} color={COLORS.primarySoft} />
+              <Text style={styles.infoTitle}>Semana</Text>
             </View>
-            <Text style={styles.summaryValue}>{weeklyStats.percentage}%</Text>
-            <Text style={styles.summaryLabel}>Semana</Text>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${weeklyStats.percentage}%` }]} />
-            </View>
-            <Text style={styles.summaryCaption}>{weeklyStats.completed}/{weeklyStats.total} tareas</Text>
+            <Text style={styles.infoValue}>{weeklyStats.percentage}%</Text>
+            <Text style={styles.infoCaption}>
+              {weeklyStats.completed}/{weeklyStats.total} completadas
+            </Text>
           </View>
 
           <TouchableOpacity
-            style={styles.summaryCard}
+            style={styles.infoCard}
             activeOpacity={0.85}
             onPress={
               !locationEnabled
@@ -378,36 +415,38 @@ export default function HomeScreen() {
                 : undefined
             }
           >
-            <View style={styles.summaryIcon}>
+            <View style={styles.infoTop}>
               {loadingWeather ? (
                 <ActivityIndicator size="small" color={COLORS.primarySoft} />
               ) : (
                 <Ionicons
-                  name={weather ? getWeatherIcon(weather.weatherCode) : locationEnabled ? "cloud-outline" : "location-outline"}
-                  size={21}
+                  name={
+                    weather
+                      ? getWeatherIcon(weather.weatherCode)
+                      : locationEnabled
+                      ? "cloud-outline"
+                      : "location-outline"
+                  }
+                  size={18}
                   color={COLORS.primarySoft}
                 />
               )}
+              <Text style={styles.infoTitle}>Clima</Text>
             </View>
-            <Text style={styles.summaryValue}>
+            <Text style={styles.infoValue}>
               {loadingWeather ? "..." : weather ? `${weather.temperature}°` : "--"}
             </Text>
-            <Text style={styles.summaryLabel} numberOfLines={1}>{weather?.city ?? "Clima"}</Text>
-            <Text style={styles.summaryCaption} numberOfLines={2}>
+            <Text style={styles.infoCaption} numberOfLines={2}>
               {!locationEnabled
                 ? "Activa ubicación"
                 : weatherError
                 ? "Toca para reintentar"
                 : weather
-                ? `${weather.description} · ${weather.min}° / ${weather.max}°`
+                ? `${weather.description} · ${weather.city}`
                 : "Cargando clima"}
             </Text>
           </TouchableOpacity>
         </View>
-
-        {weather && (
-          <Text style={styles.weatherFootnote}>Sensación térmica: {weather.apparentTemperature}°</Text>
-        )}
       </ScrollView>
     </View>
   );
@@ -424,68 +463,323 @@ function QuickAction({ icon, title, subtitle, onPress }: QuickActionProps) {
   return (
     <TouchableOpacity style={styles.quickCard} activeOpacity={0.82} onPress={onPress}>
       <View style={styles.quickIcon}>
-        <Ionicons name={icon} size={22} color={COLORS.primarySoft} />
+        <Ionicons name={icon} size={21} color={COLORS.primarySoft} />
       </View>
       <Text style={styles.quickTitle}>{title}</Text>
-      <Text style={styles.quickSubtitle} numberOfLines={1}>{subtitle}</Text>
+      <Text style={styles.quickSubtitle} numberOfLines={1}>
+        {subtitle}
+      </Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { width: "100%", maxWidth: 480, alignSelf: "center", paddingHorizontal: 18, paddingTop: 24, paddingBottom: 110 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 18 },
-  headerText: { flex: 1, paddingRight: 12 },
-  greeting: { color: COLORS.textMuted, fontSize: 13 },
-  userName: { color: COLORS.text, fontSize: 24, fontWeight: "700", marginTop: 2 },
-  avatar: { width: 46, height: 46, borderRadius: 23, borderWidth: 2, borderColor: COLORS.primary },
-  avatarPlaceholder: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.surface2, borderWidth: 1, borderColor: COLORS.border, alignItems: "center", justifyContent: "center" },
-
-  lumiCard: { minHeight: 178, backgroundColor: COLORS.surface2, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border, flexDirection: "row", alignItems: "center", overflow: "hidden", paddingLeft: 18, marginBottom: 24 },
-  lumiContent: { flex: 1, zIndex: 2, paddingVertical: 18 },
-  lumiLabel: { color: COLORS.primarySoft, fontSize: 10, fontWeight: "700", letterSpacing: 1.2 },
-  lumiTitle: { color: COLORS.text, fontSize: 19, lineHeight: 24, fontWeight: "700", marginTop: 6 },
-  lumiSubtitle: { color: COLORS.textMuted, fontSize: 11, lineHeight: 16, marginTop: 5, marginBottom: 14, maxWidth: 210 },
-  lumiButton: { alignSelf: "flex-start", height: 40, borderRadius: RADIUS.md, backgroundColor: COLORS.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 14, gap: 7 },
-  lumiButtonText: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
-  lumiImage: { width: 142, height: 158, marginRight: -4, marginBottom: -9 },
-
-  sectionTitle: { color: COLORS.primarySoft, fontSize: 10, fontWeight: "700", letterSpacing: 0.8, marginBottom: 10 },
-  sectionTitleNoMargin: { color: COLORS.primarySoft, fontSize: 10, fontWeight: "700", letterSpacing: 0.8 },
-  sectionSubtitle: { color: COLORS.textMuted, fontSize: 11, marginTop: 4 },
-  sectionHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: 24, marginBottom: 10 },
-  viewAllText: { color: COLORS.primarySoft, fontSize: 11, fontWeight: "600" },
-
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  quickCard: { width: "48.5%", minHeight: 104, backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: 13 },
-  quickIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.surface3, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  quickTitle: { color: COLORS.text, fontSize: 13, fontWeight: "600" },
-  quickSubtitle: { color: COLORS.textMuted, fontSize: 10, marginTop: 3 },
-
-  tasksContainer: { marginBottom: 10 },
-  taskCard: { minHeight: 60, backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", paddingHorizontal: 13, marginBottom: 8 },
-  taskDot: { width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: COLORS.primarySoft, marginRight: 12 },
-  taskInfo: { flex: 1, paddingVertical: 10 },
-  taskTitle: { color: COLORS.text, fontSize: 13, fontWeight: "500" },
-  taskTime: { color: COLORS.textMuted, fontSize: 10, marginTop: 4 },
-  moreTasksButton: { alignSelf: "center", paddingVertical: 5, paddingHorizontal: 12 },
-  moreTasksText: { color: COLORS.primarySoft, fontSize: 11 },
-  emptyToday: { minHeight: 72, backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, marginBottom: 10, gap: 11 },
-  emptyIcon: { width: 39, height: 39, borderRadius: 20, backgroundColor: COLORS.surface3, alignItems: "center", justifyContent: "center" },
-  emptyInfo: { flex: 1 },
-  emptyTitle: { color: COLORS.text, fontSize: 13, fontWeight: "600" },
-  emptyText: { color: COLORS.textMuted, fontSize: 10, marginTop: 3 },
-  newTaskButton: { height: 44, backgroundColor: COLORS.primary, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 26 },
-  newTaskText: { color: "#FFFFFF", fontSize: 12, fontWeight: "600" },
-
-  summaryRow: { flexDirection: "row", gap: 10 },
-  summaryCard: { width: "48.5%", minHeight: 148, backgroundColor: COLORS.surface2, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, padding: 13 },
-  summaryIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surface3, alignItems: "center", justifyContent: "center", marginBottom: 10 },
-  summaryValue: { color: COLORS.text, fontSize: 24, fontWeight: "700" },
-  summaryLabel: { color: COLORS.text, fontSize: 11, fontWeight: "600", marginTop: 2 },
-  summaryCaption: { color: COLORS.textMuted, fontSize: 9, lineHeight: 13, marginTop: 6 },
-  progressTrack: { height: 5, width: "100%", backgroundColor: COLORS.surface3, borderRadius: 4, overflow: "hidden", marginTop: 9 },
-  progressFill: { height: "100%", backgroundColor: COLORS.primarySoft, borderRadius: 4 },
-  weatherFootnote: { color: COLORS.textSoft, fontSize: 9, textAlign: "right", marginTop: 7 },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  content: {
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
+    paddingHorizontal: 18,
+    paddingTop: 24,
+    paddingBottom: 110,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+  headerText: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  greeting: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+  },
+  userName: {
+    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+  },
+  avatarPlaceholder: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: COLORS.surface2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lumiCard: {
+    minHeight: 170,
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    flexDirection: "row",
+    alignItems: "center",
+    overflow: "hidden",
+    paddingLeft: 18,
+    marginBottom: 14,
+  },
+  lumiContent: {
+    flex: 1,
+    zIndex: 2,
+    paddingVertical: 18,
+  },
+  lumiLabel: {
+    color: COLORS.primarySoft,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  lumiTitle: {
+    color: COLORS.text,
+    fontSize: 21,
+    lineHeight: 25,
+    fontWeight: "700",
+    marginTop: 8,
+  },
+  lumiSubtitle: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 6,
+    marginBottom: 14,
+    maxWidth: 205,
+  },
+  lumiButton: {
+    alignSelf: "flex-start",
+    height: 40,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    gap: 7,
+  },
+  lumiButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  lumiImage: {
+    width: 144,
+    height: 158,
+    marginRight: -4,
+    marginBottom: -8,
+  },
+  quickGrid: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+  },
+  quickCard: {
+    width: "48.5%",
+    minHeight: 102,
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 13,
+  },
+  quickIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.surface3,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  quickTitle: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  quickSubtitle: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    marginTop: 3,
+  },
+  briefCard: {
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    marginBottom: 18,
+  },
+  briefLabel: {
+    color: COLORS.primarySoft,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 6,
+  },
+  briefText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    color: COLORS.primarySoft,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
+  sectionSubtitle: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 4,
+  },
+  viewAllText: {
+    color: COLORS.primarySoft,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  tasksContainer: {
+    marginBottom: 10,
+  },
+  taskCard: {
+    minHeight: 60,
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.md,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 13,
+    marginBottom: 8,
+  },
+  taskDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: COLORS.primarySoft,
+    marginRight: 12,
+  },
+  taskInfo: {
+    flex: 1,
+    paddingVertical: 10,
+  },
+  taskTitle: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  taskTime: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    marginTop: 4,
+  },
+  moreTasksButton: {
+    alignSelf: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  moreTasksText: {
+    color: COLORS.primarySoft,
+    fontSize: 11,
+  },
+  emptyToday: {
+    minHeight: 72,
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.md,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    gap: 11,
+  },
+  emptyIcon: {
+    width: 39,
+    height: 39,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyInfo: {
+    flex: 1,
+  },
+  emptyTitle: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    marginTop: 3,
+  },
+  newTaskButton: {
+    height: 44,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 18,
+  },
+  newTaskText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  infoRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  infoCard: {
+    width: "48.5%",
+    minHeight: 108,
+    backgroundColor: COLORS.surface2,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 13,
+  },
+  infoTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 12,
+  },
+  infoTitle: {
+    color: COLORS.text,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  infoValue: {
+    color: COLORS.text,
+    fontSize: 22,
+    fontWeight: "700",
+  },
+  infoCaption: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    lineHeight: 14,
+    marginTop: 4,
+  },
 });
